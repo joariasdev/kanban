@@ -1,4 +1,5 @@
 using Kanban.API.Data;
+using Kanban.API.Models.DTOs;
 using Kanban.API.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,14 +16,14 @@ public class ColumnsController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Column>> GetAll()
+    public ActionResult<IEnumerable<ColumnDTO>> GetAll()
     {
-        var columns = _context.Columns.ToList();
+        var columns = _context.Columns.Select(c => new Column { Id = c.Id, Name = c.Name, BoardId = c.BoardId }).ToList();
         return Ok(columns);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<Column> GetById(int id)
+    public ActionResult<ColumnDTO> GetById(int id)
     {
         var column = _context.Columns.Find(id);
 
@@ -30,32 +31,42 @@ public class ColumnsController : ControllerBase
         {
             return NotFound();
         }
+        var columnDTO = new Column { Id = column.Id, Name = column.Name, BoardId = column.BoardId };
 
-        return Ok(column);
+        return Ok(columnDTO);
     }
 
     [HttpPost]
-    public ActionResult<Column> Create(Column column)
+    public ActionResult<ColumnDTO> Create(CreateColumnDTO columnRequest)
     {
-        if (string.IsNullOrWhiteSpace(column.Name))
+        if (string.IsNullOrWhiteSpace(columnRequest.Name))
         {
             return BadRequest("Name is required.");
         }
 
-        var board = _context.Boards.Find(column.BoardId);
+        var board = _context.Boards.Find(columnRequest.BoardId);
 
         if (board == null)
         {
             return BadRequest("Invalid board");
         }
 
+        var column = new Column
+        {
+            Name = columnRequest.Name,
+            BoardId = columnRequest.BoardId
+        };
+
         _context.Columns.Add(column);
         _context.SaveChanges();
-        return CreatedAtAction(nameof(GetById), new { id = column.Id }, column);
+
+        var columnDto = new ColumnDTO { Id = column.Id, Name = column.Name, BoardId = column.BoardId };
+
+        return CreatedAtAction(nameof(GetById), new { id = column.Id }, columnDto);
     }
 
     [HttpPut("{id}")]
-    public IActionResult Update(int id, Column column)
+    public IActionResult Update(int id, ColumnDTO column)
     {
         if (id != column.Id)
         {
