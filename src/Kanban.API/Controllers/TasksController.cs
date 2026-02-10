@@ -1,4 +1,5 @@
 using Kanban.API.Data;
+using Kanban.API.Models.DTOs;
 using Kanban.API.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,14 +16,14 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Models.Entities.Task>> GetAll()
+    public ActionResult<IEnumerable<TaskDTO>> GetAll()
     {
-        var tasks = _context.Tasks.ToList();
-        return Ok(tasks);
+        var taskDTOs = _context.Tasks.Select(t => new TaskDTO { Id = t.Id, Name = t.Name, Description = t.Description, ColumnId = t.ColumnId }).ToList();
+        return Ok(taskDTOs);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<Models.Entities.Task> GetById(int id)
+    public ActionResult<TaskDTO> GetById(int id)
     {
         var task = _context.Tasks.Find(id);
 
@@ -31,31 +32,43 @@ public class TasksController : ControllerBase
             return NotFound();
         }
 
-        return Ok(task);
+        var taskDTO = new TaskDTO { Id = task.Id, Name = task.Name, Description = task.Description, ColumnId = task.ColumnId };
+
+        return Ok(taskDTO);
     }
 
     [HttpPost]
-    public ActionResult<Models.Entities.Task> Create(Models.Entities.Task task)
+    public ActionResult<TaskDTO> Create(CreateTaskDTO taskRequest)
     {
-        if (string.IsNullOrWhiteSpace(task.Name))
+        if (string.IsNullOrWhiteSpace(taskRequest.Name))
         {
             return BadRequest("Name is required");
         }
 
-        var column = _context.Columns.Find(task.ColumnId);
+        var column = _context.Columns.Find(taskRequest.ColumnId);
 
         if (column == null)
         {
             return BadRequest("Invalid column");
         }
 
+        var task = new Models.Entities.Task
+        {
+            Name = taskRequest.Name,
+            Description = taskRequest.Description,
+            ColumnId = taskRequest.ColumnId
+        };
+
         _context.Tasks.Add(task);
         _context.SaveChanges();
-        return CreatedAtAction(nameof(GetById), new { id = task.Id }, task);
+
+        var taskDto = new TaskDTO { Id = task.Id, Name = task.Name, Description = task.Description, ColumnId = task.ColumnId };
+
+        return CreatedAtAction(nameof(GetById), new { id = task.Id }, taskDto);
     }
 
     [HttpPut("{id}")]
-    public IActionResult Update(int id, Models.Entities.Task task)
+    public IActionResult Update(int id, TaskDTO task)
     {
         if (id != task.Id)
         {
@@ -75,6 +88,7 @@ public class TasksController : ControllerBase
         }
 
         existingTask.Name = task.Name;
+        existingTask.Description = task.Description;
 
         if (task.ColumnId != existingTask.ColumnId)
         {

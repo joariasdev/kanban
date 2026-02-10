@@ -1,5 +1,6 @@
 ﻿using System;
 using Kanban.API.Data;
+using Kanban.API.Models.DTOs;
 using Kanban.API.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,14 +17,14 @@ public class BoardsController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Board>> GetAll()
+    public ActionResult<IEnumerable<BoardDTO>> GetAll()
     {
-        var boards = _context.Boards.ToList();
-        return Ok(boards);
+        var boardDTOs = _context.Boards.Select(b => new BoardDTO { Id = b.Id, Name = b.Name }).ToList();
+        return Ok(boardDTOs);
     }
 
     [HttpGet("{id}")]
-    public ActionResult<Board> GetById(int id)
+    public ActionResult<BoardDTO> GetById(int id)
     {
         var board = _context.Boards.Find(id);
 
@@ -32,23 +33,38 @@ public class BoardsController : ControllerBase
             return NotFound();
         }
 
-        return Ok(board);
+        var boardDTO = new BoardDTO { Id = board.Id, Name = board.Name };
+
+        return Ok(boardDTO);
     }
 
     [HttpPost]
-    public ActionResult<Board> Create(Board board)
+    public ActionResult<BoardDTO> Create(CreateBoardDTO boardRequest)
     {
-        if (string.IsNullOrWhiteSpace(board.Name))
+        if (string.IsNullOrWhiteSpace(boardRequest.Name))
         {
             return BadRequest("Name is required.");
         }
+
+        var board = new Board
+        {
+            Name = boardRequest.Name
+        };
+
         _context.Boards.Add(board);
         _context.SaveChanges();
-        return CreatedAtAction(nameof(GetById), new { id = board.Id }, board);
+
+        var boardDTO = new BoardDTO
+        {
+            Id = board.Id,
+            Name = board.Name
+        };
+
+        return CreatedAtAction(nameof(GetById), new { id = board.Id }, boardDTO);
     }
 
     [HttpPut("{id}")]
-    public IActionResult Update(int id, Board board)
+    public IActionResult Update(int id, BoardDTO board)
     {
         if (id != board.Id)
         {
