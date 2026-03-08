@@ -1,4 +1,5 @@
-using Kanban.API.Data;
+using Kanban.Infrastructure.Repositories;
+using Kanban.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +11,9 @@ builder.Services.AddSwaggerGen();
 string? kanbanDbConnection = builder.Configuration.GetConnectionString("KanbanDbConnection");
 
 builder.Services.AddDbContext<ApplicationDbContext>(opt => opt.UseSqlServer(kanbanDbConnection));
+builder.Services.AddTransient<BoardRepository>();
+builder.Services.AddTransient<ColumnRepository>();
+builder.Services.AddTransient<TaskRepository>();
 
 var app = builder.Build();
 
