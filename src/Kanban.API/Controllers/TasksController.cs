@@ -1,7 +1,7 @@
-using Kanban.API.Data;
 using Kanban.API.Models.DTOs;
-using Kanban.API.Models.Entities;
+using Kanban.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Task = Kanban.Domain.Entities.Task;
 
 namespace Kanban.API.Controllers;
 
@@ -9,23 +9,25 @@ namespace Kanban.API.Controllers;
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-    public TasksController(ApplicationDbContext context)
+    private readonly TaskRepository _taskRepository;
+    private readonly ColumnRepository _columnRepository;
+    public TasksController(TaskRepository taskRepository, ColumnRepository columnRepository)
     {
-        _context = context;
+        _taskRepository = taskRepository;
+        _columnRepository = columnRepository;
     }
 
     [HttpGet]
     public ActionResult<IEnumerable<TaskDTO>> GetAll()
     {
-        var taskDTOs = _context.Tasks.Select(t => new TaskDTO { Id = t.Id, Name = t.Name, Description = t.Description, ColumnId = t.ColumnId }).ToList();
+        var taskDTOs = _taskRepository.GetAll().Select(t => new TaskDTO { Id = t.Id, Name = t.Name, Description = t.Description, ColumnId = t.ColumnId }).ToList();
         return Ok(taskDTOs);
     }
 
     [HttpGet("{id}")]
     public ActionResult<TaskDTO> GetById(int id)
     {
-        var task = _context.Tasks.Find(id);
+        var task = _taskRepository.GetById(id);
 
         if (task == null)
         {
@@ -45,22 +47,21 @@ public class TasksController : ControllerBase
             return BadRequest("Name is required");
         }
 
-        var column = _context.Columns.Find(taskRequest.ColumnId);
+        var column = _columnRepository.GetById(taskRequest.ColumnId);
 
         if (column == null)
         {
             return BadRequest("Invalid column");
         }
 
-        var task = new Models.Entities.Task
+        var task = new Task
         {
             Name = taskRequest.Name,
             Description = taskRequest.Description,
             ColumnId = taskRequest.ColumnId
         };
 
-        _context.Tasks.Add(task);
-        _context.SaveChanges();
+        _taskRepository.Create(task);
 
         var taskDto = new TaskDTO { Id = task.Id, Name = task.Name, Description = task.Description, ColumnId = task.ColumnId };
 
@@ -80,7 +81,7 @@ public class TasksController : ControllerBase
             return BadRequest("Name is required");
         }
 
-        var existingTask = _context.Tasks.Find(id);
+        var existingTask = _taskRepository.GetById(id);
 
         if (existingTask == null)
         {
@@ -92,7 +93,7 @@ public class TasksController : ControllerBase
 
         if (task.ColumnId != existingTask.ColumnId)
         {
-            var column = _context.Columns.Find(task.ColumnId);
+            var column = _columnRepository.GetById(task.ColumnId);
 
             if (column == null)
             {
@@ -102,20 +103,21 @@ public class TasksController : ControllerBase
             existingTask.ColumnId = task.ColumnId;
         }
 
-        _context.SaveChanges();
+        _taskRepository.Update(existingTask);
+
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
-        var task = _context.Tasks.Find(id);
+        var task = _taskRepository.GetById(id);
         if (task == null)
         {
             return NotFound();
         }
-        _context.Tasks.Remove(task);
-        _context.SaveChanges();
+        _taskRepository.Delete(id);
+
         return NoContent();
     }
 }

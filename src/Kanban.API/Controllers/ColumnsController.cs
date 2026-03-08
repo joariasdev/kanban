@@ -1,6 +1,6 @@
-using Kanban.API.Data;
 using Kanban.API.Models.DTOs;
-using Kanban.API.Models.Entities;
+using Kanban.Domain.Entities;
+using Kanban.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kanban.API.Controllers;
@@ -9,29 +9,31 @@ namespace Kanban.API.Controllers;
 [Route("api/[controller]")]
 public class ColumnsController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-    public ColumnsController(ApplicationDbContext context)
+    private readonly ColumnRepository _columnRepository;
+    private readonly BoardRepository _boardRepository;
+    public ColumnsController(ColumnRepository columnRepository, BoardRepository boardRepository)
     {
-        _context = context;
+        _columnRepository = columnRepository;
+        _boardRepository = boardRepository;
     }
 
     [HttpGet]
     public ActionResult<IEnumerable<ColumnDTO>> GetAll()
     {
-        var columns = _context.Columns.Select(c => new Column { Id = c.Id, Name = c.Name, BoardId = c.BoardId }).ToList();
+        var columns = _columnRepository.GetAll().Select(c => new ColumnDTO { Id = c.Id, Name = c.Name, BoardId = c.BoardId }).ToList();
         return Ok(columns);
     }
 
     [HttpGet("{id}")]
     public ActionResult<ColumnDTO> GetById(int id)
     {
-        var column = _context.Columns.Find(id);
+        var column = _columnRepository.GetById(id);
 
         if (column == null)
         {
             return NotFound();
         }
-        var columnDTO = new Column { Id = column.Id, Name = column.Name, BoardId = column.BoardId };
+        var columnDTO = new ColumnDTO { Id = column.Id, Name = column.Name, BoardId = column.BoardId };
 
         return Ok(columnDTO);
     }
@@ -44,7 +46,7 @@ public class ColumnsController : ControllerBase
             return BadRequest("Name is required.");
         }
 
-        var board = _context.Boards.Find(columnRequest.BoardId);
+        var board = _boardRepository.GetById(columnRequest.BoardId);
 
         if (board == null)
         {
@@ -57,8 +59,7 @@ public class ColumnsController : ControllerBase
             BoardId = columnRequest.BoardId
         };
 
-        _context.Columns.Add(column);
-        _context.SaveChanges();
+        _columnRepository.Create(column);
 
         var columnDto = new ColumnDTO { Id = column.Id, Name = column.Name, BoardId = column.BoardId };
 
@@ -78,14 +79,14 @@ public class ColumnsController : ControllerBase
             return BadRequest("Name is required");
         }
 
-        var board = _context.Boards.Find(column.BoardId);
+        var board = _boardRepository.GetById(column.BoardId);
 
         if (board == null)
         {
             return BadRequest("Invalid board");
         }
 
-        var existingColumn = _context.Columns.Find(id);
+        var existingColumn = _columnRepository.GetById(id);
 
         if (existingColumn == null)
         {
@@ -94,20 +95,21 @@ public class ColumnsController : ControllerBase
 
         existingColumn.Name = column.Name;
 
-        _context.SaveChanges();
+        _columnRepository.Update(existingColumn);
+
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
-        var column = _context.Columns.Find(id);
+        var column = _columnRepository.GetById(id);
         if (column == null)
         {
             return NotFound();
         }
-        _context.Columns.Remove(column);
-        _context.SaveChanges();
+        _columnRepository.Delete(id);
+
         return NoContent();
     }
 }

@@ -1,7 +1,6 @@
-﻿using System;
-using Kanban.API.Data;
-using Kanban.API.Models.DTOs;
-using Kanban.API.Models.Entities;
+﻿using Kanban.API.Models.DTOs;
+using Kanban.Domain.Entities;
+using Kanban.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kanban.API.Controllers;
@@ -10,23 +9,23 @@ namespace Kanban.API.Controllers;
 [Route("api/[controller]")]
 public class BoardsController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-    public BoardsController(ApplicationDbContext context)
+    private readonly BoardRepository _boardRepository;
+    public BoardsController(BoardRepository boardRepository)
     {
-        _context = context;
+        _boardRepository = boardRepository;
     }
 
     [HttpGet]
     public ActionResult<IEnumerable<BoardDTO>> GetAll()
     {
-        var boardDTOs = _context.Boards.Select(b => new BoardDTO { Id = b.Id, Name = b.Name }).ToList();
+        var boardDTOs = _boardRepository.GetAll().Select(b => new BoardDTO { Id = b.Id, Name = b.Name }).ToList();
         return Ok(boardDTOs);
     }
 
     [HttpGet("{id}")]
     public ActionResult<BoardDTO> GetById(int id)
     {
-        var board = _context.Boards.Find(id);
+        var board = _boardRepository.GetById(id);
 
         if (board == null)
         {
@@ -51,8 +50,7 @@ public class BoardsController : ControllerBase
             Name = boardRequest.Name
         };
 
-        _context.Boards.Add(board);
-        _context.SaveChanges();
+        _boardRepository.Create(board);
 
         var boardDTO = new BoardDTO
         {
@@ -76,7 +74,7 @@ public class BoardsController : ControllerBase
             return BadRequest("Name is required");
         }
 
-        var existingBoard = _context.Boards.Find(id);
+        var existingBoard = _boardRepository.GetById(id);
 
         if (existingBoard == null)
         {
@@ -85,20 +83,20 @@ public class BoardsController : ControllerBase
 
         existingBoard.Name = board.Name;
 
-        _context.SaveChanges();
+        _boardRepository.Update(existingBoard);
+        
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
-        var board = _context.Boards.Find(id);
+        var board = _boardRepository.GetById(id);
         if (board == null)
         {
             return NotFound();
         }
-        _context.Boards.Remove(board);
-        _context.SaveChanges();
+        _boardRepository.Delete(id);
         return NoContent();
     }
 }
