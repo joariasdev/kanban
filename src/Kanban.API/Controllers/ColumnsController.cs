@@ -1,6 +1,6 @@
-using Kanban.API.Models.DTOs;
-using Kanban.Domain.Entities;
-using Kanban.Infrastructure.Repositories;
+using Kanban.Application.DTOs;
+using Kanban.Application.Responses;
+using Kanban.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kanban.API.Controllers;
@@ -9,107 +9,40 @@ namespace Kanban.API.Controllers;
 [Route("api/[controller]")]
 public class ColumnsController : ControllerBase
 {
-    private readonly ColumnRepository _columnRepository;
-    private readonly BoardRepository _boardRepository;
-    public ColumnsController(ColumnRepository columnRepository, BoardRepository boardRepository)
+    private readonly ColumnService _columnService;
+    public ColumnsController(ColumnService columnService)
     {
-        _columnRepository = columnRepository;
-        _boardRepository = boardRepository;
+        _columnService = columnService;
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<ColumnDTO>> GetAll()
+    public ApiResponse<List<ColumnDTO>> GetAll()
     {
-        var columns = _columnRepository.GetAll().Select(c => new ColumnDTO { Id = c.Id, Name = c.Name, BoardId = c.BoardId }).ToList();
-        return Ok(columns);
+        return _columnService.GetAll();
+       
     }
 
     [HttpGet("{id}")]
-    public ActionResult<ColumnDTO> GetById(int id)
+    public ApiResponse<ColumnDTO> GetById(int id)
     {
-        var column = _columnRepository.GetById(id);
-
-        if (column == null)
-        {
-            return NotFound();
-        }
-        var columnDTO = new ColumnDTO { Id = column.Id, Name = column.Name, BoardId = column.BoardId };
-
-        return Ok(columnDTO);
+       return _columnService.GetById(id);
     }
 
     [HttpPost]
-    public ActionResult<ColumnDTO> Create(CreateColumnDTO columnRequest)
+    public ApiResponse<ColumnDTO> Create(CreateColumnDTO columnRequest)
     {
-        if (string.IsNullOrWhiteSpace(columnRequest.Name))
-        {
-            return BadRequest("Name is required.");
-        }
-
-        var board = _boardRepository.GetById(columnRequest.BoardId);
-
-        if (board == null)
-        {
-            return BadRequest("Invalid board");
-        }
-
-        var column = new Column
-        {
-            Name = columnRequest.Name,
-            BoardId = columnRequest.BoardId
-        };
-
-        _columnRepository.Create(column);
-
-        var columnDto = new ColumnDTO { Id = column.Id, Name = column.Name, BoardId = column.BoardId };
-
-        return CreatedAtAction(nameof(GetById), new { id = column.Id }, columnDto);
+       return _columnService.Create(columnRequest);
     }
 
     [HttpPut("{id}")]
-    public IActionResult Update(int id, ColumnDTO column)
+    public ApiResponse<ColumnDTO> Update(int id, ColumnDTO column)
     {
-        if (id != column.Id)
-        {
-            return BadRequest("Incorrect Id");
-        }
-
-        if (string.IsNullOrWhiteSpace(column.Name))
-        {
-            return BadRequest("Name is required");
-        }
-
-        var board = _boardRepository.GetById(column.BoardId);
-
-        if (board == null)
-        {
-            return BadRequest("Invalid board");
-        }
-
-        var existingColumn = _columnRepository.GetById(id);
-
-        if (existingColumn == null)
-        {
-            return NotFound();
-        }
-
-        existingColumn.Name = column.Name;
-
-        _columnRepository.Update(existingColumn);
-
-        return NoContent();
+      return _columnService.Update(id, column);
     }
 
     [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
+    public ApiResponse<ColumnDTO> Delete(int id)
     {
-        var column = _columnRepository.GetById(id);
-        if (column == null)
-        {
-            return NotFound();
-        }
-        _columnRepository.Delete(id);
-
-        return NoContent();
+       return _columnService.Delete(id);
     }
 }

@@ -1,4 +1,4 @@
-namespace Kanban.API.Models.DTOs;
+namespace Kanban.Application.DTOs;
 
 public class CreateColumnDTO
 {

@@ -1,7 +1,7 @@
-using Kanban.API.Models.DTOs;
-using Kanban.Infrastructure.Repositories;
+using Kanban.Application.DTOs;
+using Kanban.Application.Responses;
+using Kanban.Application.Services;
 using Microsoft.AspNetCore.Mvc;
-using Task = Kanban.Domain.Entities.Task;
 
 namespace Kanban.API.Controllers;
 
@@ -9,115 +9,39 @@ namespace Kanban.API.Controllers;
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
-    private readonly TaskRepository _taskRepository;
-    private readonly ColumnRepository _columnRepository;
-    public TasksController(TaskRepository taskRepository, ColumnRepository columnRepository)
+    private readonly TaskService _taskService;
+    public TasksController(TaskService taskService)
     {
-        _taskRepository = taskRepository;
-        _columnRepository = columnRepository;
+        _taskService = taskService;
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<TaskDTO>> GetAll()
+    public ApiResponse<List<TaskDTO>> GetAll()
     {
-        var taskDTOs = _taskRepository.GetAll().Select(t => new TaskDTO { Id = t.Id, Name = t.Name, Description = t.Description, ColumnId = t.ColumnId }).ToList();
-        return Ok(taskDTOs);
+        return _taskService.GetAll();
     }
 
     [HttpGet("{id}")]
-    public ActionResult<TaskDTO> GetById(int id)
+    public ApiResponse<TaskDTO> GetById(int id)
     {
-        var task = _taskRepository.GetById(id);
-
-        if (task == null)
-        {
-            return NotFound();
-        }
-
-        var taskDTO = new TaskDTO { Id = task.Id, Name = task.Name, Description = task.Description, ColumnId = task.ColumnId };
-
-        return Ok(taskDTO);
+        return _taskService.GetById(id);
     }
 
     [HttpPost]
-    public ActionResult<TaskDTO> Create(CreateTaskDTO taskRequest)
+    public ApiResponse<TaskDTO> Create(CreateTaskDTO taskRequest)
     {
-        if (string.IsNullOrWhiteSpace(taskRequest.Name))
-        {
-            return BadRequest("Name is required");
-        }
-
-        var column = _columnRepository.GetById(taskRequest.ColumnId);
-
-        if (column == null)
-        {
-            return BadRequest("Invalid column");
-        }
-
-        var task = new Task
-        {
-            Name = taskRequest.Name,
-            Description = taskRequest.Description,
-            ColumnId = taskRequest.ColumnId
-        };
-
-        _taskRepository.Create(task);
-
-        var taskDto = new TaskDTO { Id = task.Id, Name = task.Name, Description = task.Description, ColumnId = task.ColumnId };
-
-        return CreatedAtAction(nameof(GetById), new { id = task.Id }, taskDto);
+        return _taskService.Create(taskRequest);
     }
 
     [HttpPut("{id}")]
-    public IActionResult Update(int id, TaskDTO task)
+    public ApiResponse<TaskDTO> Update(int id, TaskDTO taskDTO)
     {
-        if (id != task.Id)
-        {
-            return BadRequest("Incorrect Id");
-        }
-
-        if (string.IsNullOrWhiteSpace(task.Name))
-        {
-            return BadRequest("Name is required");
-        }
-
-        var existingTask = _taskRepository.GetById(id);
-
-        if (existingTask == null)
-        {
-            return NotFound();
-        }
-
-        existingTask.Name = task.Name;
-        existingTask.Description = task.Description;
-
-        if (task.ColumnId != existingTask.ColumnId)
-        {
-            var column = _columnRepository.GetById(task.ColumnId);
-
-            if (column == null)
-            {
-                return BadRequest("Invalid column");
-            }
-
-            existingTask.ColumnId = task.ColumnId;
-        }
-
-        _taskRepository.Update(existingTask);
-
-        return NoContent();
+        return _taskService.Update(id, taskDTO);
     }
 
     [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
+    public ApiResponse<TaskDTO> Delete(int id)
     {
-        var task = _taskRepository.GetById(id);
-        if (task == null)
-        {
-            return NotFound();
-        }
-        _taskRepository.Delete(id);
-
-        return NoContent();
+        return _taskService.Delete(id);
     }
 }
