@@ -1,3 +1,4 @@
+using Kanban.Application.Services;
 using Kanban.Infrastructure.Repositories;
 using Kanban.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(opt => opt.UseSqlServer(kanb
 builder.Services.AddTransient<BoardRepository>();
 builder.Services.AddTransient<ColumnRepository>();
 builder.Services.AddTransient<TaskRepository>();
+builder.Services.AddTransient<BoardService>();
+builder.Services.AddTransient<ColumnService>();
+builder.Services.AddTransient<TaskService>();
 
 var app = builder.Build();
 
